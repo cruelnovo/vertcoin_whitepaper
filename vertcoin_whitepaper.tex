@@ -1,0 +1,472 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhead[L]{Vertcoin Whitepaper (2025)}
+\fancyhead[R]{\thepage}
+
+\title{\textbf{Vertcoin: Algorithmic Adaptation and the Pursuit of Equitable Proof-of-Work}}
+\author{Developers for Vertcoin}
+\date{2025}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Vertcoin (VTC) is a decentralized peer-to-peer cryptocurrency focused on Application-Specific Integrated Circuit (ASIC) resistance and equitable mining. Since Vertcoin's inception in 2014, Vertcoin has transitioned through multiple proof-of-work (PoW) algorithms to maintain fair mining participation. Scrypt-N, Lyra2RE, Lyra2REv2, Lyra2REv3, and Verthash. This whitepaper explains the technical rationale behind each algorithmic transition and presents detailed mathematical expositions for Scrypt-N, Lyra2, and Verthash, including detailed Verthash table generation, mining Verthash, formal derivations and references.
+\end{abstract}
+
+\section*{Preamble: The Importance of ASIC Resistance}
+
+Decentralization has been the core tenet of secure and censorship-resistant digital money. The earliest cryptocurrencies, including Bitcoin and Litecoin, envisioned a system where anyone could participate in network consensus and block creation using commodity hardware. As Satoshi Nakamoto described in the original Bitcoin whitepaper:
+
+\begin{quote}
+    ``The root problem with conventional currency is all the trust that’s required to make it work. $\ldots$ What is needed is an electronic payment system based on cryptographic proof instead of trust, allowing any two willing parties to transact directly with each other without the need for a trusted third party.'' \\
+    \textit{--- Satoshi Nakamoto, \href{https://bitcoin.org/bitcoin.pdf}{Bitcoin Whitepaper}, 2008}
+\end{quote}
+
+This vision of trustless participation extends naturally to mining. In the early years, Bitcoin mining could be performed on ordinary CPUs, then GPUs, and it was assumed this would allow anyone with a computer to help secure the network and earn rewards. Satoshi wrote in 2010:
+\begin{quote}
+    ``The intention was that as the need for specialized and faster hardware arises, that the cost and complexity of mining increases, [but] it would be shared more or less equally by everyone in the world. But if you can build special hardware that is much faster, then you can create a situation where only a few people have access to mining, and that is not good.'' \\ \textit{--- Satoshi Nakamoto, \href{https://bitcointalk.org/index.php?topic=2228.msg29444\#msg29444}{Bitcointalk}, 2010}
+\end{quote}
+
+However, with the emergence of Application-Specific Integrated Circuits (ASICs), mining power became heavily concentrated in the hands of a few who could afford the infrastructure required for specialized hardware. This concentration of hash power contradicts the original ethos of distributed trust and can lead to vulnerabilities such as:
+
+\begin{itemize}
+    \item \textbf{Reduced accessibility:} Ordinary users are priced out, undermining the open participation that makes public blockchains resilient.
+    \item \textbf{Network security risks:} Centralized mining facilities become potential targets for regulatory or physical intervention.
+\end{itemize}
+
+The drive for ASIC resistance in cryptocurrencies like Vertcoin is a deliberate effort to preserve the accessibility and security of the network. By adopting memory- and bandwidth-intensive algorithms, Vertcoin seeks to ``level the playing field'' and make mining viable on consumer-grade hardware, thus empowering a broader community to participate in consensus.
+
+This approach aligns directly with the principles Satoshi set forth, fostering a truly decentralized, censorship-resistant, and inclusive digital currency ecosystem.
+
+\section{Introduction}
+
+The advent of Application-Specific Integrated Circuits (ASICs) undermined the decentralization promise of Proof-of-Work (PoW) blockchains. Vertcoin’s mission is to remain accessible to consumer hardware by continuously evolving its PoW algorithm to deter ASIC and Field Programmable Gate Array (FPGA) centralization. This paper documents Vertcoin's approach and the mathematics underlying its algorithms.
+
+\section{PoW Algorithm Evolution}
+
+\subsection{Scrypt-N (2014)}
+Vertcoin utilized a time-dependent adaptation of the Scrypt-N PoW algorithm. Vertcoin’s implementation increases the 'N-factor' over time, based on block timestamps. This time-based parameter adjustment increases memory and computational requirements. As time progresses, N-Factor increases, and so does the hashing difficulty in memory usage and CPU/GPU cycles.
+
+\subsection{Lyra2RE (2014--2015)}
+Vertcoin hard forked the network to a refactored version of Lyra2RE with new parameters and different padding algorithms. A refactored chained hash algorithm combining BLAKE, Keccak, Skein, BMW, and Lyra2, designed to increase hardware complexity for ASICs. 
+
+\subsubsection{Security Rationale For Lyra2RE}
+Vertcoin forked from Scrypt-N to Lyra2RE, a NIST5 based chained algorithm with customizable parameters, as a proactive defense against emerging Scrypt-N capable ASICs.
+
+\subsection{Lyra2REv2 (2015--2019)}
+Vertcoin hard forked to Lyra2REv2 to address vulnerabilities and increase security. The hash chain became: BLAKE → Keccak → Lyra2 → SHA256 → Skein → Keccak, using the memory-hard Lyra2 core.
+
+\subsubsection{Security Rationale For Lyra2REv2}
+Vertcoin forked from Lyra2RE to Lyra2REv2 due to an assumed CPU botnet controlling more than 50\% of hashing power on the network.  This fork effectively removed efficient CPU mining and Vertcoin embraced GPU mining to secure the network.
+
+\subsection{Lyra2REv3 (2019--2021)}
+\textbf{Lyra2REv3} further increases memory and computational requirements of the Lyra2 step, updates parameters, and uses the same chain as v2. It was designed to resist emerging FPGA and potential ASIC threats by making mining harder and less energy-efficient for specialized hardware.
+
+\subsubsection{Security Rationale For Lyra2REv3}
+Vertcoin forked from Lyra2REv2 to Lyra2REv3 to prevent Lyra2REv2-compatible ASICs from participating in network consensus and to serve as an interim solution while the Verthash algorithm was being developed.
+
+\subsection{Verthash (2021--present)}
+A "dataset-bound" PoW algorithm requiring large random-access memory and no pre-computation, inspired by Ethash but uniquely bound to Vertcoin’s blockchain state.
+
+\subsubsection{Security Rationale For Verthash}
+Vertcoin hard forked to Verthash as a long-term strategic direction to restore and protect decentralization by preventing ASICs and FPGAs from controlling/participating in network consensus. 
+
+\newpage
+\section{Scrypt-N: Mathematical Derivation}
+
+The core Scrypt function is defined as:
+
+\[
+\text{scrypt}(P, S, N, r, p, \text{dkLen})
+\]
+
+Where:
+\begin{itemize}
+    \item \( P \): password (the 80-byte Vertcoin block header)
+    \item \( S \): salt (also the Vertcoin block header)
+    \item \( N \): CPU/memory cost parameter (time based)
+    \item \( r \): block size parameter
+    \item \( p \): parallelization parameter
+    \item \( \text{dkLen} \): key length in bytes
+\end{itemize}
+
+For Vertcoin, \( r = 1 \), \( p = 1 \), and \( \text{dkLen} = 32 \). The N-factor is a function of block time.
+
+\subsection{Initialization}
+
+Let \( P \in \{0,1\}^{640} \) denote the 80-byte Vertcoin block header. The salt \( S \) is set to \( P \), making the function self-salting.
+
+First, apply PBKDF2 with HMAC-SHA256:
+
+\[
+B := \text{PBKDF2}_{\text{HMAC-SHA256}}(P, S, 1, 128 \cdot r \cdot p)
+\]
+
+Since \( r = p = 1 \), we have:
+
+\[
+B \in \{0,1\}^{128}
+\]
+
+\subsection{Memory-Hard Mixing}
+
+The output \( B \) is processed by the SMix function:
+
+\[
+\text{SMix}(B, N, r) \Rightarrow B'
+\]
+
+Define \( X := B \). Then allocate a memory array \( V \in (\{0,1\}^{128})^N \).
+
+\subsubsection{First Loop (Filling Memory)}
+
+\[
+\text{For } i = 0 \text{ to } N-1:
+\begin{cases}
+V[i] := X \\
+X := \text{BlockMix}(X)
+\end{cases}
+\]
+
+\subsubsection{Second Loop (Mixing with Random Indexing)}
+
+\[
+\text{For } i = 0 \text{ to } N-1:
+\begin{cases}
+j := \text{Integerify}(X) \bmod N \\
+X := \text{BlockMix}(X \oplus V[j])
+\end{cases}
+\]
+
+Where:
+\begin{itemize}
+    \item \texttt{Integerify}(X) extracts the last 64 bits of \( X \) as a little-endian integer \\
+    --- Vertcoin does not define or use a function called \texttt{Integerify}, but performs the integer extraction step in-line, as required by the Scrypt standard.
+    \item \texttt{BlockMix} uses the Salsa20/8 core as its cryptographic primitive
+\end{itemize}
+
+The result \( X \) after these operations becomes the new \( B' \).
+
+\subsection{Final Output Derivation}
+
+Apply PBKDF2 again:
+
+\[
+\text{PoW Hash} := \text{PBKDF2}_{\text{HMAC-SHA256}}(P, B', 1, 32)
+\]
+
+The final hash is 32 bytes and serves as the proof-of-work digest.
+
+\subsection{Dynamic N-factor Selection}
+
+Vertcoin determines \( \text{Nfactor} \) as a function of block time. Let \( t \) denote block time:
+
+\[
+\text{Nfactor}(t) =
+\begin{cases}
+4, & t \leq t_0 \\
+\min(30, \left\lfloor \log_2(N(t)) \right\rfloor), & \text{otherwise}
+\end{cases}
+\]
+
+Then:
+\[
+N(t) = 2^{\text{Nfactor}(t)}
+\]
+
+The value of \( \text{Nfactor} \) increases gradually to harden the function against hardware optimizations.
+
+\subsection{Summary}
+
+The complete Scrypt-N function used in Vertcoin is:
+
+\[
+\text{scrypt-n}(P) = \text{PBKDF2}_{\text{HMAC-SHA256}}\left(P, \text{SMix}\left(\text{PBKDF2}_{\text{HMAC-SHA256}}(P, P, 1, 128), 2^{\text{Nfactor}}, 1\right), 1, 32\right)
+\]
+
+Where \( \text{Nfactor} \) is computed based on the current block's timestamp.
+
+\section{Vertcoin's Lyra2-based Proof-of-Work Algorithms}
+
+\subsection{Lyra2: Core Memory-Hard Function}
+
+Lyra2 is a password hashing function utilizing a sponge construction to hepl Vertcoin achieve ASIC resistance through both memory and time difficulty.
+
+Let:
+\begin{itemize}
+    \item $H_{\text{sponge}}$ be a cryptographic sponge function.
+    \item $T$ be the time cost.
+    \item $R$ be the number of rows (memory size, $\text{M\_cost}$).
+    \item $C$ be the number of columns.
+    \item $p$ be the degree of parallelism.
+    \item $P$ the input (password; for Vertcoin it's the 80-byte block header), $S$ the salt (same as $P$).
+\end{itemize}
+
+The Lyra2 function is defined as:
+\[
+\mathrm{Lyra2}(P, S, T, R, C, p) = \mathrm{Extract}(H_{\text{sponge}}^{T,R,C,p}(P \Vert S))
+\]
+where $\mathrm{Extract}$ denotes extracting the final digest from the sponge state.
+
+\subsection{Lyra2RE}
+"Reordered Execution" (sometimes also referred to as "Re-Ordered" or "Re-Entrant" in some altcoin's, but for Vertcoin it means Reordered Execution)
+\\
+\\
+Let $h_1, h_2, \ldots, h_9$ denote the following hash functions, all with 512-bit output:
+\begin{align*}
+h_1 &= \mathrm{BLAKE512} \\
+h_2 &= \mathrm{Keccak512} \\
+h_3 &= \mathrm{Skein512} \\
+h_4 &= \mathrm{BMW512} \\
+h_5 &= \mathrm{Luffa512} \\
+h_6 &= \mathrm{CubeHash512} \\
+h_7 &= \mathrm{SHAvite512} \\
+h_8 &= \mathrm{SIMD512} \\
+h_9 &= \mathrm{Echo512}
+\end{align*}
+
+The full hash chain is:
+\[
+y = h_9(h_8(h_7(h_6(h_5(h_4(h_3(h_2(h_1(x)))))))))
+\]
+The final output is then:
+\[
+\mathrm{Lyra2RE}(x) = \mathrm{Lyra2}(y, y, T=1, R=8, C=256, p=1)
+\]
+
+\subsection{Lyra2REv2}
+
+This version streamlines the hash pipeline and replaces some functions with stronger alternatives, all at 256 bits:
+\begin{align*}
+h_1 &= \mathrm{BLAKE256} \\
+h_2 &= \mathrm{Keccak256} \\
+h_3 &= \mathrm{Skein256} \\
+h_4 &= \mathrm{Groestl256} \\
+h_5 &= \mathrm{JH256}
+\end{align*}
+
+The chain is:
+\[
+y = h_5(h_4(h_3(h_2(h_1(x)))))
+\]
+with Lyra2 parameters:
+\[
+\mathrm{Lyra2REv2}(x) = \mathrm{Lyra2}(y, y, T=1, R=8, C=256, p=1)
+\]
+
+\subsection{Lyra2REv3}
+
+Lyra2REv3 uses the same hash pipeline as Lyra2REv2 but with an enhanced memory-hard function. The Lyra2 parameters are:
+\[
+T=1, \quad R=32, \quad C=256, \quad p=4
+\]
+So,
+\[
+y = h_5(h_4(h_3(h_2(h_1(x)))))
+\]
+\[
+\mathrm{Lyra2REv3}(x) = \mathrm{Lyra2}(y, y, T=1, R=32, C=256, p=4)
+\]
+
+\subsection{Memory Requirement Comparison}
+Memory requirements scale as:
+\[
+\text{Memory Usage} \propto R \cdot C \cdot p
+\]
+For Lyra2REv2:
+\[
+8 \cdot 256 \cdot 1 = 2{,}048
+\]
+For Lyra2REv3:
+\[
+32 \cdot 256 \cdot 4 = 32{,}768
+\]
+
+\section{Verthash: Mathematical Derivation}
+
+\subsection{Verthash Table Generation}
+
+\subsubsection{Overview}
+
+Verthash is a “dataset-bound” proof-of-work algorithm. Its central feature is the use of a large, pre-computed table—the \emph{Verthash table}—which must be referenced repeatedly during mining. This design ensures memory-hardness and substantial resistance to ASIC and FPGA optimizations, since large RAM and unpredictable memory access patterns are required.
+
+\subsubsection{Seed Definition}
+
+A fixed, 16-byte seed:
+\[
+S = \text{0x56 0x45 0x52 0x54 0x48 0x41 0x53 0x48 0x44 0x41 0x54 0x53 0x45 0x45 0x44 0x00}
+\]
+This is the ASCII string \texttt{"VERTHASHDATSEED"} with a null terminator.
+
+\subsubsection{Table Structure}
+
+\begin{itemize}
+    \item The table contains $N$ entries (where $N$ is chosen so that the file size is $\approx$ 1.2\,GB).
+    \item Each entry is 32 bytes.
+\end{itemize}
+
+\subsubsection{Table Generation Procedure}
+
+For each index $i$ from $0$ to $N-1$:
+
+\begin{enumerate}
+    \item Concatenate the seed $S$ (16 bytes) with the little-endian 4-byte encoding of $i$ to form a 20-byte input:
+    \[
+    \text{Input}_i = S \Vert \mathrm{LE32}(i)
+    \]
+    \item Hash the input using the SHA3-256 cryptographic hash function:
+    \[
+    T[i] = \mathrm{SHA3}\text{-}256(\text{Input}_i)
+    \]
+    \item Write $T[i]$ as the $i$-th 32-byte entry in \texttt{verthash.dat}.
+\end{enumerate}
+
+\subsubsection{File Properties and Verification}
+
+\begin{itemize}
+    \item The resulting \texttt{verthash.dat} is identical and reproducible for all nodes, ensuring consensus and ASIC resistance.
+    \item The file size is fixed, and the data can be validated by recomputing and comparing to the expected SHA3-256 output for any index.
+\end{itemize}
+
+\subsubsection{Summary of Algorithm}
+
+\begin{verbatim}
+for i in 0 .. N-1:
+    input = seed (16 bytes) || little_endian(i, 4 bytes)
+    table_entry = SHA3-256(input)
+    write table_entry to verthash.dat
+\end{verbatim}
+
+\subsubsection{Security Properties}
+
+\begin{itemize}
+    \item \textbf{Pre-determined:} The table is the same for all miners, ensuring a level playing field.
+    \item \textbf{Memory-hardness:} At $\sim$1GB+, table access patterns are impractical for ASIC implementation.
+    \item \textbf{No shortcut:} All miners must reference the full table to produce valid PoW solutions.
+\end{itemize}
+
+\section{Vertcoin's Verthash Mining Algorithm}
+
+\subsection{Mining Algorithm}
+
+Given a block header $H$ (80 bytes, including the nonce):
+
+\begin{enumerate}
+    \item \textbf{Pointer Array Generation:}
+    \begin{enumerate}
+        \item For $k = 0$ to $7$:
+        \[
+            P_k = \mathrm{SHA3}\text{-}512(\text{MutateFirstByte}(H, k))
+        \]
+        where $\text{MutateFirstByte}(H, k)$ means incrementing the first byte of $H$ by $k$ (modulo 256).
+        \item Concatenate $P_0, \ldots, P_7$ to form a 512-byte array $P$.
+        \item Interpret $P$ as 128 little-endian 4-byte unsigned integers:
+        \[
+            \text{Index}_j = \mathrm{LE32}(P[4j:4j+3]) \bmod N,\quad 0 \leq j < 128
+        \]
+    \end{enumerate}
+
+    \item \textbf{Accumulator Mixing:}
+    \begin{enumerate}
+        \item Initialize accumulator $A_0 = 0_{32}$ (32 zero bytes).
+        \item For $j = 0$ to $127$:
+        \[
+            A_{j+1} = A_j \oplus T[\text{Index}_j]
+        \]
+    \end{enumerate}
+
+    \item \textbf{Proof-of-Work Output:}  
+    The final 32-byte accumulator $A_{128}$ is the PoW hash:
+    \[
+        \text{PoW\_hash} = A_{128}
+    \]
+
+    \item \textbf{Validation:}  
+    The block is valid if $\text{PoW\_hash} < \text{Target}$.
+\end{enumerate}
+
+\subsection{Mining Algorithm Summary}
+
+\begin{itemize}
+    \item Generation of inital 32-byte array from 80-byte block header by using sha3-256 hash function.
+    \item Generation of 512-byte array (128 4-byte pointers) by using 8 iterations of sha3-512, based on block header with incremented first byte (parallel task on GPU).
+    \item Expansion of pointer array by factor 32 (4096 4-byte pointers) using bit-wise rotation.
+    \item Initalization of accumulator to avoid deprecated fnv-0 usage. The accumulator is a 32-byte value.
+    \item Logical enumeration of 16-byte chunks inside 1GB+ verthash.dat file.
+    \item 4096 iterations of 32-byte reads from verthash.dat file, using continuously modified indexes by fnv-1a function and accumulator, where the latter is also modified in every iteration accordingly to the value of 32-byte array currently extracted from the verthash.dat. The final hash is calculated by mixing initial array with all these 4096 32-byte chunks, in parallel, using fnv-1a function still.
+    \item Mining uses SHA3-512 for pointer derivation and XOR mixing for ASIC resistance.
+    \item The approach guarantees all participants mine on an identical, memory-bound dataset.
+\end{itemize}
+
+\subsection{Security Rationale of Verthash Mining}
+
+The Verthash mining algorithm was designed explicitly to maintain decentralization by resisting the dominance of specialized mining hardware (ASICs and FPGAs). Its structure leverages memory-hardness, unpredictable memory access, and strong mixing operations to ensure mining remains accessible to general-purpose hardware, especially GPUs. The following security properties illustrate how Verthash achieves these goals:
+
+\begin{enumerate}
+    \item \textbf{Memory-Hard Table Access:}
+    \begin{itemize}
+        \item \emph{Large Dataset:} Verthash requires miners to access a 1GB+ table (\texttt{verthash.dat}) for each mining attempt.
+        \item \emph{ASIC/FPGA Constraint:} On-chip memory in ASICs and FPGAs is insufficient for such a large dataset, forcing the use of slower, off-chip memory and removing their typical efficiency advantage over GPUs.
+    \end{itemize}
+
+    \item \textbf{Randomized, Unpredictable Access Patterns:}
+    \begin{itemize}
+        \item \emph{Nonce-Dependent Indices:} For each mining attempt, table indices are derived from hashing the block header and nonce, producing unpredictable access patterns.
+        \item \emph{No Pre-Fetching:} Each new nonce yields a new pattern, preventing precomputation and memory access optimization by hardware.
+    \end{itemize}
+
+    \item \textbf{Accumulator Mixing:}
+    \begin{itemize}
+        \item \emph{XOR Mixing:} Each selected table entry is XOR’d into an accumulator, ensuring the final result depends on all accessed values.
+        \item \emph{Non-Linear Output:} Any alteration to a single table value or index order fundamentally changes the mining output, resisting shortcut and partial result attacks.
+    \end{itemize}
+
+    \item \textbf{Deterministic and Public Dataset:}
+    \begin{itemize}
+        \item \emph{Universal \texttt{verthash.dat}:} The dataset is generated from a pre-determined seed, ensuring all miners use the identical file, precluding hidden optimizations.
+        \item \emph{Network-Wide Consistency:} Every participant can verify the file by checking its hash against a hardcoded value in the protocol.
+    \end{itemize}
+
+    \item \textbf{No Algorithmic Shortcuts:}
+    \begin{itemize}
+        \item \emph{Well-Studied Core:} The SHA3 hash function and memory-mixing operations have no known vulnerabilities or efficient alternatives, preventing specialized hardware from gaining a significant advantage.
+        \item \emph{No Precomputation:} Since each nonce alters access patterns, all work must be performed for every mining attempt.
+    \end{itemize}
+\end{enumerate}
+
+\section{Conclusion}
+
+Vertcoin’s active defense of decentralization is achieved by evolving its Proof-of-Work. Scrypt-N, Lyra2RE, Lyra2REv2, Lyra2REv3, and Verthash demonstrate escalating memory hardness and complexity, prioritizing fair access to mining. Ongoing research and open community engagement will drive future adaptations.
+
+\newpage
+
+\section{References}
+\begin{itemize}
+    \item Vertcoin, ``Lyra2RE Whitepaper,'' 2014. \url{https://cryptorating.eu/whitepapers/Monacoin/Vertcoin_Lyra2RE_Paper_11292014.pdf}
+    \item Bonacina, M., Barreto, P.S.L.M., ``Lyra2: Password Hashing Scheme with Improved Security Against Time-Memory Tradeoffs,'' \emph{IEEE Transactions on Computers}, 2016.
+    \item Percival, C., ``Stronger Key Derivation via Sequential Memory-Hard Functions,'' BSDCan, 2009. \url{https://www.tarsnap.com/scrypt/scrypt.pdf}
+    \item Vertcoin Project, ``Vertcoin's Scrypt-N implementation,'' vertcoin-core source code. \url{https://github.com/vertcoin-project/vertcoin-core/blob/master/src/crypto/scrypt.cpp}
+    \item Ethereum Project, ``Ethereum Whitepaper,'' 2013. \url{https://ethereum.org/en/whitepaper/}
+    \item History of Vertcoin. Fandom.   \url{https://cryptocurrency.fandom.com/wiki/Vertcoin}
+    \item Vertcoin Community, ``Undeniable Beauty of Verthash Explained,'' Reddit, 2020. \url{https://www.reddit.com/r/vertcoin/comments/iqh5tk/undeniable_beauty_of_verthash_explained/}
+    \item Vertcoin Community, ``Verthash Mining \& Verthash Testing,'' Reddit, 2020. \url{https://www.reddit.com/r/vertcoin/comments/jhz0wq/verthash_miner_verthash_testnet/}
+     \item Têtu, J.-F., Trudeau, L.-C., Van Beirendonck, M., Balatsoukas-Stimming, A., \& Giard, P. (2019). \textit{A Standalone FPGA-Based Miner for Lyra2REv2 Cryptocurrencies}. arXiv. \url{https://arxiv.org/abs/1905.08792}
+   \item Van Beirendonck, M., Trudeau, L.-C., Giard, P., \& Balatsoukas-Stimming, A. (2018). \textit{A Lyra2 FPGA Core for Lyra2REv2-Based Cryptocurrencies}. arXiv. \url{https://arxiv.org/abs/1807.05764}
+   \item Lyra2. Wikipedia. \url{https://en.wikipedia.org/wiki/Lyra2}
+   \item Lyra2REv2. BitcoinWiki. \url{https://en.bitcoinwiki.org/wiki/Lyra2REv2}
+   \item Vertcoin Project, ``verthash implementation,'' vertcoin-core source code.\\ \url{https://github.com/vertcoin-project/vertcoin-core/blob/master/src/crypto/verthash_datfile.cpp}
+   \item Nakamoto, Satoshi. ``Bitcoin: A Peer-to-Peer Electronic Cash System.'' 2008. \url{https://bitcoin.org/bitcoin.pdf}
+   \item Nakamoto, Satoshi. ``Re: What are your thoughts on the upcoming ASIC miners?'' Bitcointalk, Dec 2010.\\ \url{https://bitcointalk.org/index.php?topic=2228.msg29444#msg29444}
+
+\end{itemize}
+\end{document}
